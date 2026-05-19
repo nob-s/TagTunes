@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { signIn, useSession } from "next-auth/react";
 
 type View = "landing" | "host-room" | "guest-join" | "guest-room";
 
 export default function Home() {
   const [view, setView] = useState<View>("landing");
-  const [roomCode] = useState("abc123");
+  const [roomCode, setRoomCode] = useState<string | null>(null);
 
   const [guestCode, setGuestCode] = useState("");
   const [activeTab, setActiveTab] = useState<"search" | "queue">("queue");
@@ -17,14 +17,36 @@ export default function Home() {
     { title: "Stay", artist: "The Kid LAROI", addedBy: "You", votes: 1 },
     { title: "Heat Waves", artist: "Glass Animals", addedBy: "Sam", votes: 2 },
   ];
+  const { data: session } = useSession();
 
+  useEffect(() => {
+    if (!session) return;
+    if (view === "landing") setView("host-room");
+
+    const existing = localStorage.getItem("roomCode");
+    if (existing) {
+      setRoomCode(existing);
+      return;
+    }
+
+    fetch("/api/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "My Room" }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        localStorage.setItem("roomCode", d.id);
+        setRoomCode(d.id);
+      });
+  }, [session]);
 
   if (view === "host-room") {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md">
           <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room code</p>
-          <h1 className="text-5xl font-bold tracking-tight mb-2">{roomCode}</h1>
+          <h1 className="text-5xl font-bold tracking-tight mb-2">{roomCode ?? "..."}</h1>
           <p className="text-zinc-400 mb-8">Share this code with your guests</p>
 
           <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
