@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 
 type View = "landing" | "host-room" | "guest-join" | "guest-room";
 
@@ -110,7 +111,7 @@ export default function Home() {
                 { title: "As It Was", artist: "Harry Styles" },
               ].map((s) => (
                 <div key={s.title} className="flex items-center gap-3 py-3 border-b border-zinc-900">
-                  <div className="w-10 h-10 rounded-md bg-zinc-800 flex-shrink-0" />
+                  <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{s.title}</p>
                     <p className="text-xs text-zinc-500">{s.artist}</p>
@@ -126,7 +127,7 @@ export default function Home() {
           {activeTab === "queue" && (
             <div>
               <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">Blinding Lights</p>
                   <p className="text-xs text-zinc-500">The Weeknd</p>
@@ -138,7 +139,7 @@ export default function Home() {
               {mockQueue.map((s, i) => (
                 <div key={s.title} className="flex items-center gap-3 py-3 border-b border-zinc-900">
                   <span className="text-xs text-zinc-600 w-4 text-center">{i + 1}</span>
-                  <div className="w-10 h-10 rounded-md bg-zinc-800 flex-shrink-0" />
+                  <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{s.title}</p>
                     <p className="text-xs text-zinc-500">{s.artist} · {s.addedBy}</p>
@@ -165,7 +166,7 @@ export default function Home() {
         {/*Host*/}
         <p className="text-zinc-600 text-sm">Spotify Premium required to host</p>
         <button
-          onClick={() => setView("host-room")}
+          onClick={() => signIn("spotify")}
           className="w-full bg-green-500 hover:bg-green-400 transition text-black font-bold py-4 rounded-full text-base mb-4"
         >
           Login with Spotify
