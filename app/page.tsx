@@ -19,45 +19,41 @@ const supabase = createClient(
 export default function Home() {
   const [view, setView] = useState<View>("landing");
   const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [guestCode, setGuestCode] = useState("");
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const { data: session } = useSession();
 
-  const activeRoomCode = roomCode ?? (view === "guest-room" ? guestCode : null);
-
   useEffect(() => {
-    if (!activeRoomCode) return;
-    fetch(`/api/queue?room_id=${activeRoomCode}`)
+    if (!roomCode) return;
+    fetch(`/api/queue?room_id=${roomCode}`)
       .then(r => r.json())
-      .then(d => setQueue(d));
-  }, [activeRoomCode]);
+      .then(setQueue);
+  }, [roomCode]);
 
   useEffect(() => {
-    if (!activeRoomCode) return;
+    if (!roomCode) return;
     const channel = supabase
-      .channel(`queue:${activeRoomCode}`)
+      .channel(`queue:${roomCode}`)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${activeRoomCode}` },
-        () => fetch(`/api/queue?room_id=${activeRoomCode}`)
+        { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${roomCode}` },
+        () => fetch(`/api/queue?room_id=${roomCode}`)
           .then(r => r.json())
           .then(setQueue)
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [activeRoomCode]);
+  }, [roomCode]);
 
   const handleHost = async () => {
     if (session) {
-      await fetch("/api/rooms", {
+      const d = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "My Room" }),
-      })
-        .then(r => r.json())
-        .then(d => setRoomCode(d.id));
+      }).then(r => r.json());
+      setRoomCode(d.id);
       setView("host-room");
     } else {
-      signIn("spotify");
+      await signIn("spotify");
     }
   };
 
@@ -74,15 +70,16 @@ export default function Home() {
   if (view === "guest-join") {
     return (
       <GuestJoin
-        guestCode={guestCode}
-        setGuestCodeAction={setGuestCode}
-        onJoinAction={() => setView("guest-room")}
+        onJoinAction={(code) => {
+          setRoomCode(code);
+          setView("guest-room");
+        }}
       />
     );
   }
 
   if (view === "guest-room") {
-    return <GuestRoom guestCode={guestCode} queue={queue} />;
+    return <GuestRoom roomCode={roomCode} queue={queue} />;
   }
 
   return (

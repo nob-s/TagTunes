@@ -7,18 +7,18 @@ import SongSearch from "@/app/components/SongSearch";
 import QueueList from "@/app/components/QueueList";
 
 type Props = {
-  guestCode: string;
+  roomCode: string | null;
   queue: QueueItem[];
 };
 
-export default function GuestRoom({ guestCode, queue }: Props) {
+export default function GuestRoom({ roomCode, queue }: Props) {
   const [activeTab, setActiveTab] = useState<"search" | "queue">("queue");
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-md">
         <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room</p>
-        <h1 className="text-5xl font-bold tracking-tight mb-1">{guestCode}</h1>
+        <h1 className="text-5xl font-bold tracking-tight mb-1">{roomCode}</h1>
         <p className="text-zinc-400 text-sm mb-6">Hosted by {"TODO"} · {"TODO"} guests</p>
 
         <div className="flex bg-zinc-900 rounded-full p-1 mb-6">
@@ -40,7 +40,7 @@ export default function GuestRoom({ guestCode, queue }: Props) {
           </button>
         </div>
 
-        {activeTab === "search" && <SongSearch roomId={guestCode} />}
+        {activeTab === "search" && roomCode && <SongSearch roomId={roomCode} />}
 
         {activeTab === "queue" && (
           <QueueList
@@ -53,7 +53,7 @@ export default function GuestRoom({ guestCode, queue }: Props) {
             }
             rowAction={(item) => (
               <button className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 transition rounded-full px-3 py-1.5">
-                👍 {"TODO"}
+                👍 {item.votes}
               </button>
             )}
           />
