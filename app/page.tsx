@@ -45,12 +45,13 @@ export default function Home() {
 
   const handleHost = async () => {
     if (session) {
-      const d = await fetch("/api/rooms", {
+      await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "My Room" }),
-      }).then(r => r.json());
-      setRoomCode(d.id);
+      })
+        .then(r => r.json())
+        .then(d => setRoomCode(d.id));
       setView("host-room");
     } else {
       await signIn("spotify");

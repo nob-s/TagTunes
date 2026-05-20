@@ -22,7 +22,10 @@ export default function QueueList({ queue, nowPlaying, rowAction }: Props) {
         queue.map((item, i) => (
           <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-zinc-800 last:border-0">
             <span className="text-xs text-zinc-600 w-4 text-center shrink-0">{i + 1}</span>
-            <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
+            {item.album_image
+              ? <img src={item.album_image} className="w-10 h-10 rounded-md shrink-0 object-cover"/>
+              : <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
+            }
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{item.track_name}</p>
               <p className="text-xs text-zinc-500">{item.artist} · {item.added_by}</p>

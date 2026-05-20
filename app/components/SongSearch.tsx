@@ -30,7 +30,9 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
     }
     setSearching(true);
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&room_id=${roomId}`);
-    if (res.ok) setSearchResults(await res.json());
+    if (res.ok) {
+      setSearchResults(await res.json());
+    }
     setSearching(false);
   }
 
