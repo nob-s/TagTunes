@@ -50,7 +50,6 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
         album_image: track.album.images[0].url,
       }),
     });
-    console.log(track.album.images[0].url)
     setAddingId(null);
   }
 
