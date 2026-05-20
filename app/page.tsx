@@ -23,22 +23,13 @@ export default function Home() {
     if (!session) return;
     if (view === "landing") setView("host-room");
 
-    const existing = localStorage.getItem("roomCode");
-    if (existing) {
-      setRoomCode(existing);
-      return;
-    }
-
     fetch("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "My Room" }),
     })
       .then(r => r.json())
-      .then(d => {
-        localStorage.setItem("roomCode", d.id);
-        setRoomCode(d.id);
-      });
+      .then(d => setRoomCode(d.id));
   }, [session]);
 
   if (view === "host-room") {

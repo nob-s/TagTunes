@@ -20,6 +20,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Check for existing room first
+  const { data: existing } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("host_id", session.user.spotifyId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (existing) {
+    return NextResponse.json({ id: existing.id });
+  }
+
+  // No existing room
   const { name } = await req.json();
   const code = generateRoomCode();
 
