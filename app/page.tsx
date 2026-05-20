@@ -2,8 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { createClient } from "@supabase/supabase-js";
 
 type View = "landing" | "host-room" | "guest-join" | "guest-room";
+type QueueItem = {
+  id: string;
+  track_name: string;
+  artist: string;
+  added_by: string;
+  position: number;
+};
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function Home() {
   const [view, setView] = useState<View>("landing");
@@ -12,12 +25,16 @@ export default function Home() {
   const [guestCode, setGuestCode] = useState("");
   const [activeTab, setActiveTab] = useState<"search" | "queue">("queue");
 
-  const mockQueue = [
-    { title: "Mr. Brightside", artist: "The Killers", addedBy: "Jamie", votes: 3 },
-    { title: "Stay", artist: "The Kid LAROI", addedBy: "You", votes: 1 },
-    { title: "Heat Waves", artist: "Glass Animals", addedBy: "Sam", votes: 2 },
-  ];
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const activeRoomCode = roomCode ?? (view === "guest-room" ? guestCode : null);
   const { data: session } = useSession();
+
+  useEffect(() => {
+    if (!activeRoomCode) return;
+    fetch(`/api/queue?room_id=${activeRoomCode}`)
+      .then(r => r.json())
+      .then(d => setQueue(d));
+  }, [activeRoomCode]);
 
   useEffect(() => {
     if (!session) return;
@@ -32,13 +49,30 @@ export default function Home() {
       .then(d => setRoomCode(d.id));
   }, [session]);
 
+  useEffect(() => {
+    if (!activeRoomCode) return;
+    const channel = supabase
+      .channel(`queue:${activeRoomCode}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${activeRoomCode}` },
+        () => {
+          fetch(`/api/queue?room_id=${activeRoomCode}`)
+            .then(r => r.json())
+            .then(d => setQueue(d));
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeRoomCode]);
+
   if (view === "host-room") {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md">
           <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room code</p>
           <h1 className="text-5xl font-bold tracking-tight mb-2">{roomCode ?? "..."}</h1>
-          <p className="text-zinc-400 mb-8">Share this code with your guests</p>
+          <p className="text-zinc-400 mb-8">Welcome, {session?.user?.name} · Share this code with your guests</p>
 
           <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
             <p className="text-zinc-500 text-sm mb-3">Up next</p>
@@ -90,7 +124,7 @@ export default function Home() {
         <div className="w-full max-w-md">
           <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room</p>
           <h1 className="text-5xl font-bold tracking-tight mb-1">{guestCode}</h1>
-          <p className="text-zinc-400 text-sm mb-6">Hosted by Alex · 4 guests</p>
+          <p className="text-zinc-400 text-sm mb-6">Hosted by {"TODO"} · {"TODO"} guests</p>
 
           <div className="flex bg-zinc-900 rounded-full p-1 mb-6">
             <button
@@ -149,16 +183,16 @@ export default function Home() {
               </div>
 
               <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
-              {mockQueue.map((s, i) => (
-                <div key={s.title} className="flex items-center gap-3 py-3 border-b border-zinc-900">
+              {queue.map((s, i) => (
+                <div key={s.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
                   <span className="text-xs text-zinc-600 w-4 text-center">{i + 1}</span>
                   <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.title}</p>
-                    <p className="text-xs text-zinc-500">{s.artist} · {s.addedBy}</p>
+                    <p className="text-sm font-medium truncate">{s.track_name}</p>
+                    <p className="text-xs text-zinc-500">{s.artist} · {s.added_by}</p>
                   </div>
                   <button className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 transition rounded-full px-3 py-1.5">
-                    👍 {s.votes}
+                    👍 {"TODO"}
                   </button>
                 </div>
               ))}
