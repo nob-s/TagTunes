@@ -27,10 +27,7 @@ export default function Home() {
     fetch(`/api/queue?room_id=${roomCode}`)
       .then(r => r.json())
       .then(setQueue);
-  }, [roomCode]);
 
-  useEffect(() => {
-    if (!roomCode) return;
     const channel = supabase
       .channel(`queue:${roomCode}`)
       .on("postgres_changes",
@@ -45,13 +42,13 @@ export default function Home() {
 
   const handleHost = async () => {
     if (session) {
-      await fetch("/api/rooms", {
+      const r = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "My Room" }),
-      })
-        .then(r => r.json())
-        .then(d => setRoomCode(d.id));
+      });
+      const d = await r.json();
+      setRoomCode(d.id);
       setView("host-room");
     } else {
       await signIn("spotify");
