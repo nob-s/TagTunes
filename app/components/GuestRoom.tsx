@@ -48,10 +48,6 @@ export default function GuestRoom({ guestCode, queue }: Props) {
             nowPlaying={
               <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Blinding Lights</p>
-                  <p className="text-xs text-zinc-500">The Weeknd</p>
-                </div>
                 <span className="text-xs text-green-500 font-semibold tracking-wide">NOW PLAYING</span>
               </div>
             }

@@ -33,28 +33,33 @@ export default function Home() {
   }, [activeRoomCode]);
 
   useEffect(() => {
-    if (!session) return;
-    if (view === "landing") setView("host-room");
-    fetch("/api/rooms", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "My Room" }),
-    })
-      .then(r => r.json())
-      .then(d => setRoomCode(d.id));
-  }, [session]);
-
-  useEffect(() => {
     if (!activeRoomCode) return;
     const channel = supabase
       .channel(`queue:${activeRoomCode}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${activeRoomCode}` },
-        () => fetch(`/api/queue?room_id=${activeRoomCode}`).then(r => r.json()).then(setQueue)
+        () => fetch(`/api/queue?room_id=${activeRoomCode}`)
+          .then(r => r.json())
+          .then(setQueue)
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [activeRoomCode]);
+
+  const handleHost = async () => {
+    if (session) {
+      await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "My Room" }),
+      })
+        .then(r => r.json())
+        .then(d => setRoomCode(d.id));
+      setView("host-room");
+    } else {
+      signIn("spotify");
+    }
+  };
 
   if (view === "host-room") {
     return (
@@ -82,8 +87,9 @@ export default function Home() {
 
   return (
     <Landing
-      onHostAction={() => signIn("spotify")}
+      onHostAction={handleHost}
       onGuestAction={() => setView("guest-join")}
+      hostName={session?.user?.name ?? null}
     />
   );
 }

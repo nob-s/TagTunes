@@ -4,9 +4,10 @@
 type Props = {
   onHostAction: () => void;
   onGuestAction: () => void;
+  hostName: string | undefined;
 };
 
-export default function Landing({ onHostAction, onGuestAction }: Props) {
+export default function Landing({ onHostAction, onGuestAction, hostName }: Props) {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
@@ -20,7 +21,7 @@ export default function Landing({ onHostAction, onGuestAction }: Props) {
           onClick={onHostAction}
           className="w-full bg-green-500 hover:bg-green-400 transition text-black font-bold py-4 rounded-full text-base mb-4"
         >
-          Login with Spotify
+          {hostName ? `Host as ${hostName}` : "Login with Spotify"}
         </button>
         <button
           onClick={onGuestAction}
