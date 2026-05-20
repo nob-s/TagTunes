@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (existing) {
+    await supabase
+      .from("rooms")
+      .update({ access_token: session.accessToken })
+      .eq("id", existing.id);
     return NextResponse.json({ id: existing.id });
   }
 
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest) {
       id: code,
       host_id: session.user.spotifyId,
       name: name ?? "My Room",
+      access_token: session.accessToken,
     })
     .select()
     .single();
