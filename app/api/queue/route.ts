@@ -8,7 +8,7 @@ const supabase = createClient(
 
 // POST /api/queue — add a song
 export async function POST(req: NextRequest) {
-  const { room_id, track_uri, track_name, artist, added_by } = await req.json();
+  const { room_id, track_uri, track_name, artist, added_by, album_image} = await req.json();
 
   if (!room_id || !track_uri || !track_name || !artist) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -28,15 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("queue_items")
-    .insert({
-      room_id,
-      track_uri,
-      track_name,
-      artist,
-      added_by: added_by ?? "Guest",
-      position,
-      played: false,
-    })
+    .insert({ room_id, track_uri, track_name, artist, added_by, position, album_image })
     .select()
     .single();
 

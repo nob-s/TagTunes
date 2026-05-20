@@ -8,5 +8,6 @@ export type QueueItem = {
   position: number;
   played: boolean;
   votes: number;
+  album_image?: string | null;
   created_at: string;
 };

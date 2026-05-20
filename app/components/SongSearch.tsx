@@ -45,10 +45,12 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
         room_id: roomId,
         track_uri: track.uri,
         track_name: track.name,
-        artist: track.artists[0].name,
+        artist: track.artists.map(a => a.name).join(", "),
         added_by: addedBy,
+        album_image: track.album.images[0].url,
       }),
     });
+    console.log(track.album.images[0].url)
     setAddingId(null);
   }
 
