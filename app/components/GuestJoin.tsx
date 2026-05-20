@@ -29,7 +29,7 @@ export default function GuestJoin({ onJoinAction }: Props) {
               alert("Room not found. Check the code and try again.");
             }
           }}
-          disabled={code.length < 4}
+          disabled={code.length < 6 || code.length > 6}
           className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 transition text-black font-bold py-4 rounded-full text-base"
         >
           Join Room

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   // No existing room
   const { name } = await req.json();
-  const code = generateRoomCode();
+  const code = generateRoomCode(); // TODO handle collision of room code
 
   const { data, error } = await supabase
     .from("rooms")

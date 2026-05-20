@@ -62,10 +62,11 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/queue — reorder a song (fractional indexing)
-// Body: { id, above_position, below_position }
+// Body: { id, above_position, below_position, new_votes }
 // Pass null for above_position to move to top, null for below_position to move to bottom
+// Pass position into both positions to maintain position
 export async function PATCH(req: NextRequest) {
-  const { id, above_position, below_position } = await req.json();
+  const { id, above_position, below_position, new_votes } = await req.json();
 
   if (!id) {
     return NextResponse.json({ error: "Missing item id" }, { status: 400 });
@@ -88,7 +89,7 @@ export async function PATCH(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("queue_items")
-    .update({ position: newPosition })
+    .update({ position: newPosition, votes: new_votes})
     .eq("id", id)
     .select()
     .single();
