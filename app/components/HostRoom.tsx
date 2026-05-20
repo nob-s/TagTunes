@@ -15,6 +15,12 @@ type Props = {
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
 
+  async function onDeleteItem(item: QueueItem) {
+    await fetch(`/api/queue?id=${item.id}`, {
+      method: "DELETE",
+    });
+  }
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-md">
@@ -48,7 +54,23 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
         {activeTab === "queue" && (
           <div>
             <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
-              <QueueList queue={queue} />
+              <QueueList
+                queue={queue}
+                nowPlaying={
+                  <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+                    <span className="text-xs text-green-500 font-semibold tracking-wide">NOW PLAYING</span>
+                  </div>
+                }
+                rowAction={(item) => (
+                  <button
+                    className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-red-500 hover:text-red-500 transition rounded-full px-3 py-1.5"
+                    onClick={async () => onDeleteItem(item)}
+                  >
+                    🗑 Delete
+                  </button>
+                )}
+              />
             </div>
 
             <div className="flex gap-3">
