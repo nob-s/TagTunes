@@ -24,19 +24,23 @@ export default function Home() {
 
   useEffect(() => {
     if (!roomCode) return;
-    fetch(`/api/queue?room_id=${roomCode}`)
-      .then(r => r.json())
-      .then(setQueue);
+    console.log("Setting up subscription for room:", roomCode);
+
+    fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
 
     const channel = supabase
       .channel(`queue:${roomCode}`)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${roomCode}` },
-        () => fetch(`/api/queue?room_id=${roomCode}`)
-          .then(r => r.json())
-          .then(setQueue)
+        (payload) => {
+          console.log("Realtime event received:", payload);  // does this fire?
+          fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);  // should say SUBSCRIBED
+      });
+
     return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
 
@@ -57,27 +61,21 @@ export default function Home() {
 
   if (view === "host-room") {
     return (
-      <HostRoom
-        roomCode={roomCode}
-        queue={queue}
-        hostName={session?.user?.name ?? undefined}
-      />
+      <HostRoom roomCode={roomCode} queue={queue} hostName={session?.user?.name ?? undefined}/>
     );
   }
 
   if (view === "guest-join") {
     return (
-      <GuestJoin
-        onJoinAction={(code) => {
+      <GuestJoin onJoinAction={(code) => {
           setRoomCode(code);
           setView("guest-room");
-        }}
-      />
+        }}/>
     );
   }
 
   if (view === "guest-room") {
-    return <GuestRoom roomCode={roomCode} queue={queue} />;
+    return <GuestRoom roomCode={roomCode} queue={queue} hostName={session?.user?.name ?? undefined}/>;
   }
 
   return (
