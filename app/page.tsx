@@ -3,15 +3,13 @@
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { createClient } from "@supabase/supabase-js";
+import GuestJoin from "@/app/components/GuestJoin";
+import HostRoom from "@/app/components/HostRoom";
+import GuestRoom from "@/app/components/GuestRoom";
+import Landing from "@/app/components/Landing";
+import { QueueItem } from "@/types/queue";
 
 type View = "landing" | "host-room" | "guest-join" | "guest-room";
-type QueueItem = {
-  id: string;
-  track_name: string;
-  artist: string;
-  added_by: string;
-  position: number;
-};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,25 +19,11 @@ const supabase = createClient(
 export default function Home() {
   const [view, setView] = useState<View>("landing");
   const [roomCode, setRoomCode] = useState<string | null>(null);
-
   const [guestCode, setGuestCode] = useState("");
-  const [activeTab, setActiveTab] = useState<"search" | "queue">("queue");
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{
-    id: string;
-    name: string;
-    artists: Array<{ name: string }>;
-    uri: string;
-    album: { images: Array<{ url: string }> };
-  }>>([]);
-  const [searching, setSearching] = useState(false);
-  const [addingId, setAddingId] = useState<string | null>(null);
-
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const activeRoomCode = roomCode ?? (view === "guest-room" ? guestCode : null);
-
   const { data: session } = useSession();
+
+  const activeRoomCode = roomCode ?? (view === "guest-room" ? guestCode : null);
 
   useEffect(() => {
     if (!activeRoomCode) return;
@@ -51,7 +35,6 @@ export default function Home() {
   useEffect(() => {
     if (!session) return;
     if (view === "landing") setView("host-room");
-
     fetch("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,234 +48,42 @@ export default function Home() {
     if (!activeRoomCode) return;
     const channel = supabase
       .channel(`queue:${activeRoomCode}`)
-      .on(
-        "postgres_changes",
+      .on("postgres_changes",
         { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${activeRoomCode}` },
-        () => {
-          fetch(`/api/queue?room_id=${activeRoomCode}`)
-            .then(r => r.json())
-            .then(d => setQueue(d));
-        }
+        () => fetch(`/api/queue?room_id=${activeRoomCode}`).then(r => r.json()).then(setQueue)
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [activeRoomCode]);
 
-  async function handleSearch(query: string) {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&room_id=${guestCode}`);
-    if (res.ok) {
-      setSearchResults(await res.json());
-    }
-    setSearching(false);
-  }
-
-  async function handleAdd(track: typeof searchResults[0]) {
-    setAddingId(track.id);
-    await fetch("/api/queue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        room_id: guestCode,
-        track_uri: track.uri,
-        track_name: track.name,
-        artist: track.artists[0].name,
-        added_by: "Guest",
-      }),
-    });
-    setAddingId(null);
-  }
-
   if (view === "host-room") {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-md">
-          <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room code</p>
-          <h1 className="text-5xl font-bold tracking-tight mb-2">{roomCode ?? "..."}</h1>
-          <p className="text-zinc-400 mb-8">Welcome, {session?.user?.name} · Share this code with your guests</p>
-
-          <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
-            <p className="text-zinc-500 text-sm mb-3">Up next</p>
-            {queue.length === 0 ? (
-              <p className="text-zinc-400 italic">Queue is empty — guests can add songs</p>
-            ) : (
-              queue.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-zinc-800 last:border-0">
-                  <span className="text-xs text-zinc-600 w-4 text-center shrink-0">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.track_name}</p>
-                    <p className="text-xs text-zinc-500">{s.artist} · added by {s.added_by}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <button className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium">
-              ⏮ Prev
-            </button>
-            <button className="flex-1 bg-green-500 hover:bg-green-400 transition rounded-full py-3 text-sm font-bold">
-              ▶ Play
-            </button>
-            <button className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium">
-              Next ⏭
-            </button>
-          </div>
-        </div>
-      </div>
+      <HostRoom
+        roomCode={roomCode}
+        queue={queue}
+        hostName={session?.user?.name ?? undefined}
+      />
     );
   }
+
   if (view === "guest-join") {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm text-center">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Join a room</h1>
-          <p className="text-zinc-400 mb-8">Enter the room code from your host</p>
-          <input
-            value={guestCode}
-            onChange={(e) => setGuestCode(e.target.value.toUpperCase())}
-            placeholder="e.g. ABC123"
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-full px-6 py-4 text-center text-2xl font-bold tracking-widest mb-4 outline-none focus:border-green-500"
-          />
-          <button
-            onClick={async () => {
-              const res = await fetch(`/api/rooms?code=${guestCode}`);
-              if (res.ok) {
-                setView("guest-room");
-              } else {
-                alert("Room not found. Check the code and try again.");
-              }
-            }}
-            disabled={guestCode.length < 4}
-            className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 transition text-black font-bold py-4 rounded-full text-base"
-          >
-            Join Room
-          </button>
-        </div>
-      </div>
+      <GuestJoin
+        guestCode={guestCode}
+        setGuestCodeAction={setGuestCode}
+        onJoinAction={() => setView("guest-room")}
+      />
     );
   }
 
   if (view === "guest-room") {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-md">
-          <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room</p>
-          <h1 className="text-5xl font-bold tracking-tight mb-1">{guestCode}</h1>
-          <p className="text-zinc-400 text-sm mb-6">Hosted by {"TODO"} · {"TODO"} guests</p>
-
-          <div className="flex bg-zinc-900 rounded-full p-1 mb-6">
-            <button
-              onClick={() => setActiveTab("search")}
-              className={`flex-1 py-2 rounded-full text-sm font-medium transition ${
-                activeTab === "search" ? "bg-zinc-700 text-white" : "text-zinc-500"
-              }`}
-            >
-              Search
-            </button>
-            <button
-              onClick={() => setActiveTab("queue")}
-              className={`flex-1 py-2 rounded-full text-sm font-medium transition ${
-                activeTab === "queue" ? "bg-zinc-700 text-white" : "text-zinc-500"
-              }`}
-            >
-              Queue
-            </button>
-          </div>
-
-          {activeTab === "search" && (
-            <div>
-              <input
-                placeholder="Search for a song..."
-                value={searchQuery}
-                onChange={e => handleSearch(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-full px-5 py-3 text-sm outline-none focus:border-green-500 mb-4"
-              />
-              {searching && (
-                <p className="text-zinc-500 text-sm text-center py-4">Searching…</p>
-              )}
-              {searchResults.map((track) => (
-                <div key={track.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
-                  {track.album.images[0] && (
-                    <img src={track.album.images[0].url} className="w-10 h-10 rounded-md shrink-0" alt={track.name} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{track.name}</p>
-                    <p className="text-xs text-zinc-500">{track.artists[0].name}</p>
-                  </div>
-                  <button
-                    onClick={() => handleAdd(track)}
-                    disabled={addingId === track.id}
-                    className="text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 disabled:opacity-40 transition rounded-full px-3 py-1.5"
-                  >
-                    {addingId === track.id ? "Adding…" : "+ Add"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === "queue" && (
-            <div>
-              <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Blinding Lights</p>
-                  <p className="text-xs text-zinc-500">The Weeknd</p>
-                </div>
-                <span className="text-xs text-green-500 font-semibold tracking-wide">NOW PLAYING</span>
-              </div>
-
-              <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
-              {queue.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
-                  <span className="text-xs text-zinc-600 w-4 text-center">{i + 1}</span>
-                  <div className="w-10 h-10 rounded-md bg-zinc-800 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.track_name}</p>
-                    <p className="text-xs text-zinc-500">{s.artist} · {s.added_by}</p>
-                  </div>
-                  <button className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 transition rounded-full px-3 py-1.5">
-                    👍 {"TODO"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return <GuestRoom guestCode={guestCode} queue={queue} />;
   }
+
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm text-center">
-        <div className="text-5xl mb-6">🎵</div>
-        <h1 className="text-4xl font-bold tracking-tight mb-2">TagTunes</h1>
-        <p className="text-zinc-400 mb-10">
-          Host a room. Let your guests pick the music.
-        </p>
-        {/*Host*/}
-        <p className="text-zinc-600 text-sm">Spotify Premium required to host</p>
-        <button
-          onClick={() => signIn("spotify")}
-          className="w-full bg-green-500 hover:bg-green-400 transition text-black font-bold py-4 rounded-full text-base mb-4"
-        >
-          Login with Spotify
-        </button>
-        {/*Guest*/}
-        <button
-          onClick={() => setView("guest-join")}
-          className="w-full bg-zinc-800 hover:bg-zinc-700 transition text-white font-bold py-4 rounded-full text-base"
-        >
-          Join a Room
-        </button>
-      </div>
-    </div>
+    <Landing
+      onHostAction={() => signIn("spotify")}
+      onGuestAction={() => setView("guest-join")}
+    />
   );
 }
