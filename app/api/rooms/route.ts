@@ -12,6 +12,27 @@ function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+// GET /api/rooms?code=ABC123 — validate a room code (guests)
+export async function GET(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get("code");
+
+  if (!code) {
+    return NextResponse.json({ error: "Missing room code" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("rooms")
+    .select("id, name, host_id, created_at")
+    .eq("id", code.toUpperCase())
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(data);
+}
+
 // POST /api/rooms — host creates a room
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -57,25 +78,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json(data, { status: 201 });
-}
-
-// GET /api/rooms?code=ABC123 — validate a room code (guests)
-export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("code");
-
-  if (!code) {
-    return NextResponse.json({ error: "Missing room code" }, { status: 400 });
-  }
-
-  const { data, error } = await supabase
-    .from("rooms")
-    .select("id, name, host_id, created_at")
-    .eq("id", code.toUpperCase())
-    .single();
-
-  if (error || !data) {
-    return NextResponse.json({ error: "Room not found" }, { status: 404 });
-  }
-
-  return NextResponse.json(data);
 }

@@ -6,6 +6,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// GET /api/queue?room_id=<code> — fetch queue for a room
+export async function GET(req: NextRequest) {
+  const room_id = req.nextUrl.searchParams.get("room_id");
+
+  if (!room_id) {
+    return NextResponse.json({ error: "Missing room_id" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("queue_items")
+    .select("*")
+    .eq("room_id", room_id)
+    .eq("played", false)
+    .order("position", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
 // POST /api/queue — add a song
 export async function POST(req: NextRequest) {
   const { room_id, track_uri, track_name, artist, added_by, album_image} = await req.json();
@@ -96,26 +118,4 @@ export async function DELETE(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
-
-// GET /api/queue?room_id=<code> — fetch queue for a room
-export async function GET(req: NextRequest) {
-  const room_id = req.nextUrl.searchParams.get("room_id");
-
-  if (!room_id) {
-    return NextResponse.json({ error: "Missing room_id" }, { status: 400 });
-  }
-
-  const { data, error } = await supabase
-    .from("queue_items")
-    .select("*")
-    .eq("room_id", room_id)
-    .eq("played", false)
-    .order("position", { ascending: true });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
 }
