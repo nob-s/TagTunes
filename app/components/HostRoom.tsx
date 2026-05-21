@@ -22,9 +22,15 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Spotify.Track | null>(null);
 
-  const playerInitialised = useRef(false);
-
   const { data: session } = useSession();
+
+  const playerInitialised = useRef(false);
+  const queueRef = useRef<QueueItem[]>([]);
+  const deviceIdRef = useRef<string | null>(null);
+
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { deviceIdRef.current = deviceId; }, [deviceId]);
+
   useEffect(() => {
     if (!session?.accessToken) return;
     if (playerInitialised.current) return;
@@ -47,7 +53,7 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
         setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
 
-        if (state.paused && state.position === 0 && state.track_window.next_tracks.length === 0) {
+        if (state.paused && state.position === 0) {
           playNextTrack();
         }
       });
@@ -66,10 +72,10 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
   }, [session?.accessToken]);
 
   async function playNextTrack() {
-    const next = queue.find((item) => !item.played);
-    if (!next || !deviceId || !session?.accessToken) return;
+    const next = queueRef.current.find((item) => !item.played);
+    if (!next || !deviceIdRef.current || !session?.accessToken) return;
 
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -81,10 +87,7 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
     await fetch("/api/queue", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: next.id,
-        new_played: true
-      }),
+      body: JSON.stringify({ id: next.id, new_played: true }),
     });
   }
 
