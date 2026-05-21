@@ -64,7 +64,7 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
       {searching && (
         <p className="text-zinc-500 text-sm text-center py-4">Searching…</p>
       )}
-      <div className="overflow-y-auto flex-1 min-h-0">
+      <div className="overflow-y-auto max-h-[60vh]">
         {searchResults.map((track) => (
           <div key={track.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
             {track.album.images[0] && (

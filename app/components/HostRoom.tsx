@@ -16,7 +16,6 @@ type Props = {
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
 
-  const [player, setPlayer] = useState<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [deviceReady, setDeviceReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -24,26 +23,34 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
 
   const { data: session } = useSession();
 
+  const playerRef = useRef<Spotify.Player | null>(null);
   const playerInitialised = useRef(false);
   const queueRef = useRef<QueueItem[]>([]);
   const deviceIdRef = useRef<string | null>(null);
+  const accessTokenRef = useRef<string | null>(null);
+  const markedPlayedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => { deviceIdRef.current = deviceId; }, [deviceId]);
+  useEffect(() => {
+    if (session?.accessToken) accessTokenRef.current = session.accessToken;
+  }, [session?.accessToken]);
 
   useEffect(() => {
     if (!session?.accessToken) return;
     if (playerInitialised.current) return;
     playerInitialised.current = true;
 
-    const initPlayer = (accessToken: string) => {
+    const initPlayer = () => {
       const p = new window.Spotify.Player({
-        name: 'TagTunes Player',
-        getOAuthToken: (cb) => cb(accessToken),
+        name: "TagTunes Player",
+        getOAuthToken: (cb) => cb(accessTokenRef.current!),
         volume: 0.5,
       });
 
-      p.addListener('ready', async ({ device_id }) => {
+      p.addListener("ready", ({ device_id }) => {
+        console.log("SDK ready, device_id:", device_id);
+        deviceIdRef.current = device_id;
         setDeviceId(device_id);
         setDeviceReady(true);
       });
@@ -53,23 +60,42 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
         setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
 
-        if (state.paused && state.position === 0) {
-          playNextTrack();
+        if (state.paused && state.position === 0 && !state.track_window.next_tracks.length) {
+          const finishedUri = state.track_window.current_track.uri;
+          if (!markedPlayedRef.current.has(finishedUri)) {
+            markedPlayedRef.current.add(finishedUri);
+            markCurrentPlayed(finishedUri).then(() => playNextTrack());
+          }
         }
       });
 
-      p.connect()
-      setPlayer(p);
+      p.connect().then((success) => {
+        console.log("SDK connect result:", success);
+      });
+
+      playerRef.current = p;
     };
 
     if (window.Spotify) {
-      initPlayer(session.accessToken);
+      initPlayer();
     } else {
-      window.onSpotifyWebPlaybackSDKReady = () => initPlayer(session.accessToken as string);
+      window.onSpotifyWebPlaybackSDKReady = initPlayer;
     }
 
-    return () => { player?.disconnect(); };
+    return () => {
+      playerRef.current?.disconnect();
+    };
   }, [session?.accessToken]);
+
+  async function markCurrentPlayed(uri: string) {
+    const item = queueRef.current.find(i => i.track_uri === uri);
+    if (!item) return;
+    await fetch("/api/queue", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, new_played: true }),
+    });
+  }
 
   async function playNextTrack() {
     const next = queueRef.current.find((item) => !item.played);
@@ -78,16 +104,10 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessTokenRef.current}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ uris: [next.track_uri] }),
-    });
-
-    await fetch("/api/queue", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: next.id, new_played: true }),
     });
   }
 
@@ -98,7 +118,7 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
   }
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col items-center px-6 py-8 overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-8">
       <div className="w-full max-w-md flex flex-col flex-1 min-h-0">
         <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room code</p>
         <h1 className="text-5xl font-bold tracking-tight mb-2">{roomCode ?? "..."}</h1>
@@ -159,8 +179,8 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
                 ${!deviceReady ? "opacity-50 cursor-not-allowed" : "hover:bg-green-400"}
                 `}
                 onClick={async () => {
-                  if (isPlaying || currentTrack) {
-                    player?.togglePlay();
+                  if (isPlaying) {
+                    playerRef.current?.togglePlay();
                   } else {
                     await playNextTrack();
                   }
@@ -171,7 +191,7 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
               <button
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium"
                 onClick={async () => {
-                  await player?.nextTrack();   // skips in SDK
+                  await playerRef.current?.nextTrack();   // skips in SDK
                   await playNextTrack();       // marks played + queues next URI
                 }}
               >
