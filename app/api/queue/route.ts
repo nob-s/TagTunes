@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
     .from("queue_items")
     .select("position")
     .eq("room_id", room_id)
-    .eq("played", false)
     .order("position", { ascending: false })
     .limit(1)
     .single();

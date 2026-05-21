@@ -8,8 +8,9 @@ type Props = {
 };
 
 export default function QueueList({ queue, rowAction }: Props) {
-  const upNext = queue.filter(item => !item.played);
-  const played = queue.filter(i => i.played);
+  const orderedQueue = queue.toSorted((a, b) => a.position - b.position);
+  const upNext = orderedQueue.filter(item => !item.played);
+  const played = orderedQueue.filter(i => i.played);
   const last = played[played.length - 1];
 
   return (
