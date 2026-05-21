@@ -18,7 +18,6 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [deviceReady, setDeviceReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<Spotify.Track | null>(null);
 
   const { data: session } = useSession();
 
@@ -54,7 +53,6 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
 
       p.addListener('player_state_changed', (state) => {
         if (!state) return;
-        setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
 
         // Auto-advance: song ended naturally (paused at position 0, nothing next in SDK queue)
