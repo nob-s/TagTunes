@@ -63,12 +63,18 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
                   </div>
                 }
                 rowAction={(item) => (
-                  <button
-                    className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-red-500 hover:text-red-500 transition rounded-full px-3 py-1.5"
-                    onClick={async () => onDeleteItem(item)}
-                  >
-                    🗑 Delete
-                  </button>
+                  <div className="flex gap-x-4">
+                    <p className="border border-zinc-700 rounded-full py-2 px-3">
+                      👍 {item.votes}
+                    </p>
+                    <button
+                      className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-red-500 hover:text-red-500 transition rounded-full px-3 py-1.5"
+                      onClick={async () => onDeleteItem(item)}
+                    >
+                      🗑 Delete
+                    </button>
+                  </div>
+
                 )}
               />
             </div>

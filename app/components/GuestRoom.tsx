@@ -82,7 +82,7 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
                 `}
                 onClick={async () => onToggleVote(item)}
               >
-                👍 {item.votes + (voteItems[item.id] ? 1 : 0)}
+                👍 {item.votes}
               </button>
             )}
           />
