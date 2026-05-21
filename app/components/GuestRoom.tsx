@@ -27,8 +27,6 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: item.id,
-        above_position: item.position,
-        below_position: item.position,
         new_votes: item.votes + voteChange,}),
     });
   }
@@ -64,12 +62,6 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
         {activeTab === "queue" && (
           <QueueList
             queue={queue}
-            nowPlaying={
-              <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-                <span className="text-xs text-green-500 font-semibold tracking-wide">NOW PLAYING</span>
-              </div>
-            }
             rowAction={(item) => (
               <button
                 className={`

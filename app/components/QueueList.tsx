@@ -5,14 +5,22 @@ import { QueueItem } from "@/types/queue";
 
 type Props = {
   queue: QueueItem[];
-  nowPlaying?: React.ReactNode;
+  currentTrack?: QueueItem;
   rowAction?: (item: QueueItem, index: number) => React.ReactNode;
 };
 
-export default function QueueList({ queue, nowPlaying, rowAction }: Props) {
+export default function QueueList({ queue, currentTrack, rowAction }: Props) {
   return (
     <div>
-      {nowPlaying}
+      {currentTrack &&
+        <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 mb-4">
+            <img src={currentTrack.album_image!} />
+            <span>{currentTrack.track_name} — {currentTrack.artist}</span>
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+          <span className="text-xs text-green-500 font-semibold tracking-wide">NOW PLAYING</span>
+        </div>
+      }
+
 
       <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Up next</p>
 

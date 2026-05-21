@@ -62,24 +62,25 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/queue — reorder a song (fractional indexing)
-// Body: { id, above_position, below_position, new_votes }
-// Pass null for above_position to move to top, null for below_position to move to bottom
-// Pass position into both positions to maintain position
+// Body: { id, above_position, below_position, new_votes, new_played }
+// Don't pass above_position to move to top, don't pass for below_position to move to bottom
+// Don't pass both to not move.
+// Don't pass new_votes or new_played if not updating
 export async function PATCH(req: NextRequest) {
-  const { id, above_position, below_position, new_votes } = await req.json();
+  const { id, above_position, below_position, new_votes, new_played } = await req.json();
 
   if (!id) {
     return NextResponse.json({ error: "Missing item id" }, { status: 400 });
   }
 
-  let newPosition: number;
+  let newPosition;
 
-  if (above_position == null && below_position == null) {
-    return NextResponse.json({ error: "Need at least one neighbor position" }, { status: 400 });
-  } else if (above_position == null) {
+  if (above_position == undefined && below_position == undefined) {
+    newPosition = undefined;
+  } else if (above_position == undefined) {
     // Moving to top
     newPosition = below_position - 500;
-  } else if (below_position == null) {
+  } else if (below_position == undefined) {
     // Moving to bottom
     newPosition = above_position + 1000;
   } else {
@@ -87,9 +88,15 @@ export async function PATCH(req: NextRequest) {
     newPosition = (above_position + below_position) / 2;
   }
 
+  const updateJson = {
+    ...(new_votes !== undefined && { votes: new_votes}),
+    ...(newPosition !== undefined && { position: newPosition }),
+    ...(new_played !== undefined && { played: new_played }),
+  };
+
   const { data, error } = await supabase
     .from("queue_items")
-    .update({ position: newPosition, votes: new_votes})
+    .update(updateJson)
     .eq("id", id)
     .select()
     .single();
