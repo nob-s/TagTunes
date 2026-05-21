@@ -29,6 +29,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const queueRef = useRef<QueueItem[]>([]);
   const deviceIdRef = useRef<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
+  const currentTrackRef = useRef<Spotify.Track | null>(null); // ← new ref
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
 
@@ -55,6 +56,9 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
 
       p.addListener("player_state_changed", (state) => {
         if (!state) return;
+
+        // Keep ref in sync with state
+        currentTrackRef.current = state.track_window.current_track;
         setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
 
@@ -99,11 +103,16 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   }
 
   async function play() {
-    await playNextTrack();
+    if (currentTrackRef.current) {
+      // Resume the paused track instead of jumping to the next one
+      playerRef.current?.resume();
+    } else {
+      await playNextTrack();
+    }
   }
 
   function pause() {
-    playerRef.current?.togglePlay();
+    playerRef.current?.pause(); // ← was wrongly calling togglePlay()
   }
 
   async function togglePlay() {
