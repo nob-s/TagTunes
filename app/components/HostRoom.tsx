@@ -14,7 +14,7 @@ type Props = {
 
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
-  const { deviceReady, isPlaying, togglePlay, skip } = useSpotifyPlayer(queue);
+  const { deviceReady, isPlaying, volume, setVolume, togglePlay, skip } = useSpotifyPlayer(queue);
 
   async function onDeleteItem(item: QueueItem) {
     await fetch(`/api/queue?id=${item.id}`, { method: "DELETE" });
@@ -90,6 +90,22 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
               >
                 Next ⏭
               </button>
+            </div>
+            <div className="flex items-center gap-3 px-1 pt-2">
+              <span className="text-zinc-500 text-base">{
+                volume == 0 ? "🔇"
+                  : volume < 0.33 ? "🔈"
+                    : volume < 0.66 ? "🔉" : "🔊"}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="flex-1 accent-green-500"
+              />
             </div>
           </div>
         )}

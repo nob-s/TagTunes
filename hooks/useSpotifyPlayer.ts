@@ -8,6 +8,7 @@ export interface SpotifyPlayerState {
   deviceReady: boolean;
   isPlaying: boolean;
   currentTrack: Spotify.Track | null;
+  volume: number;
 }
 
 export interface SpotifyPlayerControls {
@@ -15,6 +16,7 @@ export interface SpotifyPlayerControls {
   pause: () => void;
   togglePlay: () => Promise<void>;
   skip: () => Promise<void>;
+  setVolume: (value: number) => Promise<void>;
 }
 
 export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & SpotifyPlayerControls {
@@ -23,6 +25,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const [deviceReady, setDeviceReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Spotify.Track | null>(null);
+  const [volume, setVolumeState] = useState(0.5);
 
   const playerRef = useRef<Spotify.Player | null>(null);
   const playerInitialised = useRef(false);
@@ -128,5 +131,11 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
     await playNextTrack();
   }
 
-  return { deviceReady, isPlaying, currentTrack, play, pause, togglePlay, skip };
+  async function setVolume(value: number) {
+    const clamped = Math.max(0, Math.min(1, value));
+    await playerRef.current?.setVolume(clamped);
+    setVolumeState(clamped);
+  }
+
+  return { deviceReady, isPlaying, currentTrack, volume, play, pause, togglePlay, skip, setVolume};
 }
