@@ -13,7 +13,7 @@ export type SearchTrack = {
 
 type Props = {
   roomId: string;
-  addedBy?: string;  // add this
+  addedBy?: string;
 };
 
 export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
@@ -54,7 +54,7 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
   }
 
   return (
-    <div>
+    <div className="flex flex-col">
       <input
         placeholder="Search for a song..."
         value={searchQuery}
@@ -64,28 +64,30 @@ export default function SongSearch({ roomId, addedBy = "Guest" }: Props) {
       {searching && (
         <p className="text-zinc-500 text-sm text-center py-4">Searching…</p>
       )}
-      {searchResults.map((track) => (
-        <div key={track.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
-          {track.album.images[0] && (
-            <img
-              src={track.album.images[0].url}
-              className="w-10 h-10 rounded-md shrink-0"
-              alt={track.name}
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{track.name}</p>
-            <p className="text-xs text-zinc-500">{track.artists[0].name}</p>
+      <div className="overflow-y-auto flex-1 min-h-0">
+        {searchResults.map((track) => (
+          <div key={track.id} className="flex items-center gap-3 py-3 border-b border-zinc-900">
+            {track.album.images[0] && (
+              <img
+                src={track.album.images[0].url}
+                className="w-10 h-10 rounded-md shrink-0"
+                alt={track.name}
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{track.name}</p>
+              <p className="text-xs text-zinc-500">{track.artists[0].name}</p>
+            </div>
+            <button
+              onClick={() => handleAdd(track)}
+              disabled={addingId === track.id}
+              className="text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 disabled:opacity-40 transition rounded-full px-3 py-1.5"
+            >
+              {addingId === track.id ? "Adding…" : "+ Add"}
+            </button>
           </div>
-          <button
-            onClick={() => handleAdd(track)}
-            disabled={addingId === track.id}
-            className="text-xs border border-zinc-700 hover:border-green-500 hover:text-green-500 disabled:opacity-40 transition rounded-full px-3 py-1.5"
-          >
-            {addingId === track.id ? "Adding…" : "+ Add"}
-          </button>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

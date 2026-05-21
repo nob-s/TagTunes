@@ -32,8 +32,8 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-md">
+    <div className="h-screen bg-black text-white flex flex-col items-center px-6 py-8 overflow-hidden">
+      <div className="w-full max-w-md flex flex-col flex-1 min-h-0">
         <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room Code</p>
         <h1 className="text-5xl font-bold tracking-tight mb-1">{roomCode}</h1>
         <p className="text-zinc-400 text-sm mb-6">Hosted by {hostName}</p>
