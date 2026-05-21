@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     .from("queue_items")
     .select("*")
     .eq("room_id", room_id)
-    .eq("played", false)
     .order("position", { ascending: true });
 
   if (error) {

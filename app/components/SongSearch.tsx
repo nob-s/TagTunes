@@ -1,4 +1,3 @@
-// app/components/SongSearch.tsx
 "use client";
 
 import { useState } from "react";

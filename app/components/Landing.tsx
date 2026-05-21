@@ -1,4 +1,3 @@
-// app/components/Landing.tsx
 "use client";
 
 type Props = {

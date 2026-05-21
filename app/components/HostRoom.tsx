@@ -1,4 +1,3 @@
-// app/components/HostRoom.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -28,7 +27,6 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const queueRef = useRef<QueueItem[]>([]);
   const deviceIdRef = useRef<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
-  const markedPlayedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => { deviceIdRef.current = deviceId; }, [deviceId]);
@@ -49,7 +47,6 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
       });
 
       p.addListener("ready", ({ device_id }) => {
-        console.log("SDK ready, device_id:", device_id);
         deviceIdRef.current = device_id;
         setDeviceId(device_id);
         setDeviceReady(true);
@@ -60,18 +57,13 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
         setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
 
+        // Auto-advance: song ended naturally (paused at position 0, nothing next in SDK queue)
         if (state.paused && state.position === 0 && !state.track_window.next_tracks.length) {
-          const finishedUri = state.track_window.current_track.uri;
-          if (!markedPlayedRef.current.has(finishedUri)) {
-            markedPlayedRef.current.add(finishedUri);
-            markCurrentPlayed(finishedUri).then(() => playNextTrack());
-          }
+          playNextTrack();
         }
       });
 
-      p.connect().then((success) => {
-        console.log("SDK connect result:", success);
-      });
+      p.connect();
 
       playerRef.current = p;
     };
@@ -87,34 +79,28 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
     };
   }, [session?.accessToken]);
 
-  async function markCurrentPlayed(uri: string) {
-    const item = queueRef.current.find(i => i.track_uri === uri);
-    if (!item) return;
+  async function playNextTrack() {
+    const next = queueRef.current.find((item) => !item.played);
+    if (!next || !deviceIdRef.current || !accessTokenRef.current) return;
+
     await fetch("/api/queue", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id, new_played: true }),
+      body: JSON.stringify({ id: next.id, new_played: true }),
     });
-  }
-
-  async function playNextTrack() {
-    const next = queueRef.current.find((item) => !item.played);
-    if (!next || !deviceIdRef.current || !session?.accessToken) return;
 
     await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${accessTokenRef.current}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ uris: [next.track_uri] }),
     });
   }
 
   async function onDeleteItem(item: QueueItem) {
-    await fetch(`/api/queue?id=${item.id}`, {
-      method: "DELETE",
-    });
+    await fetch(`/api/queue?id=${item.id}`, { method: "DELETE" });
   }
 
   return (
@@ -164,7 +150,6 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
                       🗑 Delete
                     </button>
                   </div>
-
                 )}
               />
             </div>
@@ -191,8 +176,8 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
               <button
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium"
                 onClick={async () => {
-                  await playerRef.current?.nextTrack();   // skips in SDK
-                  await playNextTrack();       // marks played + queues next URI
+                  await playerRef.current?.nextTrack();
+                  await playNextTrack();
                 }}
               >
                 Next ⏭
