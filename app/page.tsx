@@ -24,22 +24,18 @@ export default function Home() {
 
   useEffect(() => {
     if (!roomCode) return;
-    console.log("Setting up subscription for room:", roomCode);
 
     fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
 
     const channel = supabase
-      .channel(`queue:${roomCode}`)
+      .channel(`queue_${roomCode}`)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "queue_items", filter: `room_id=eq.${roomCode}` },
-        (payload) => {
-          console.log("Realtime event received:", payload);  // does this fire?
+        { event: "*", schema: "public", table: "queue_items"},//, filter: `room_id=eq.${roomCode}` },
+        () => {
           fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
         }
       )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);  // should say SUBSCRIBED
-      });
+      .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
