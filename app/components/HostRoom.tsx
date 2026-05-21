@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { QueueItem } from "@/types/queue";
 import SongSearch from "@/app/components/SongSearch";
 import QueueList from "@/app/components/QueueList";
-import { useSession } from "next-auth/react";
+import { useSpotifyPlayer } from "@/hooks/useSpotifyPlayer";
 
 type Props = {
   roomCode: string | null;
@@ -14,88 +14,7 @@ type Props = {
 
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
-
-  const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [deviceReady, setDeviceReady] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const { data: session } = useSession();
-
-  const playerRef = useRef<Spotify.Player | null>(null);
-  const playerInitialised = useRef(false);
-  const queueRef = useRef<QueueItem[]>([]);
-  const deviceIdRef = useRef<string | null>(null);
-  const accessTokenRef = useRef<string | null>(null);
-
-  useEffect(() => { queueRef.current = queue; }, [queue]);
-  useEffect(() => { deviceIdRef.current = deviceId; }, [deviceId]);
-  useEffect(() => {
-    if (session?.accessToken) accessTokenRef.current = session.accessToken;
-  }, [session?.accessToken]);
-
-  useEffect(() => {
-    if (!session?.accessToken) return;
-    if (playerInitialised.current) return;
-    playerInitialised.current = true;
-
-    const initPlayer = () => {
-      const p = new window.Spotify.Player({
-        name: "TagTunes Player",
-        getOAuthToken: (cb) => cb(accessTokenRef.current!),
-        volume: 0.5,
-      });
-
-      p.addListener("ready", ({ device_id }) => {
-        deviceIdRef.current = device_id;
-        setDeviceId(device_id);
-        setDeviceReady(true);
-      });
-
-      p.addListener('player_state_changed', (state) => {
-        if (!state) return;
-        setIsPlaying(!state.paused);
-
-        // Auto-advance: song ended naturally (paused at position 0, nothing next in SDK queue)
-        if (state.paused && state.position === 0 && !state.track_window.next_tracks.length) {
-          playNextTrack();
-        }
-      });
-
-      p.connect();
-
-      playerRef.current = p;
-    };
-
-    if (window.Spotify) {
-      initPlayer();
-    } else {
-      window.onSpotifyWebPlaybackSDKReady = initPlayer;
-    }
-
-    return () => {
-      playerRef.current?.disconnect();
-    };
-  }, [session?.accessToken]);
-
-  async function playNextTrack() {
-    const next = queueRef.current.find((item) => !item.played);
-    if (!next || !deviceIdRef.current || !accessTokenRef.current) return;
-
-    await fetch("/api/queue", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: next.id, new_played: true }),
-    });
-
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceIdRef.current}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessTokenRef.current}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ uris: [next.track_uri] }),
-    });
-  }
+  const { deviceReady, isPlaying, togglePlay, skip } = useSpotifyPlayer(queue);
 
   async function onDeleteItem(item: QueueItem) {
     await fetch(`/api/queue?id=${item.id}`, { method: "DELETE" });
@@ -143,7 +62,7 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
                     </p>
                     <button
                       className="flex items-center gap-1 text-xs border border-zinc-700 hover:border-red-500 hover:text-red-500 transition rounded-full px-3 py-1.5"
-                      onClick={async () => onDeleteItem(item)}
+                      onClick={() => onDeleteItem(item)}
                     >
                       🗑 Delete
                     </button>
@@ -158,25 +77,16 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
               </button>
               <button
                 disabled={!deviceReady}
-                className={`flex-1 bg-green-500 transition rounded-full py-3 text-sm font-bold
-                ${!deviceReady ? "opacity-50 cursor-not-allowed" : "hover:bg-green-400"}
-                `}
-                onClick={async () => {
-                  if (isPlaying) {
-                    playerRef.current?.togglePlay();
-                  } else {
-                    await playNextTrack();
-                  }
-                }}
+                className={`flex-1 bg-green-500 transition rounded-full py-3 text-sm font-bold ${
+                  !deviceReady ? "opacity-50 cursor-not-allowed" : "hover:bg-green-400"
+                }`}
+                onClick={togglePlay}
               >
                 {deviceReady ? (isPlaying ? "⏸ Pause" : "▶ Play") : "Connecting..."}
               </button>
               <button
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium"
-                onClick={async () => {
-                  await playerRef.current?.nextTrack();
-                  await playNextTrack();
-                }}
+                onClick={skip}
               >
                 Next ⏭
               </button>
