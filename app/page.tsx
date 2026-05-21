@@ -30,7 +30,7 @@ export default function Home() {
     const channel = supabase
       .channel(`queue_${roomCode}`)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "queue_items"},//, filter: `room_id=eq.${roomCode}` },
+        { event: "*", schema: "public", table: "queue_items"},//TODO , filter: `room_id=eq.${roomCode}` },
         () => {
           fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
         }

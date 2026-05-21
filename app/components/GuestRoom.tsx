@@ -38,7 +38,7 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
       <div className="w-full max-w-md">
         <p className="text-zinc-500 text-sm uppercase tracking-widest mb-1">Room Code</p>
         <h1 className="text-5xl font-bold tracking-tight mb-1">{roomCode}</h1>
-        <p className="text-zinc-400 text-sm mb-6">Hosted by {hostName} · {"TODO"} guests</p>
+        <p className="text-zinc-400 text-sm mb-6">Hosted by {hostName}</p>
 
         <div className="flex bg-zinc-900 rounded-full p-1 mb-6">
           <button
