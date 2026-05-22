@@ -9,6 +9,8 @@ export interface SpotifyPlayerState {
   isPlaying: boolean;
   currentTrack: Spotify.Track | null;
   volume: number;
+  position: number;
+  duration: number;
 }
 
 export interface SpotifyPlayerControls {
@@ -17,6 +19,7 @@ export interface SpotifyPlayerControls {
   togglePlay: () => Promise<void>;
   skip: () => Promise<void>;
   setVolume: (value: number) => Promise<void>;
+  seek: (positionMs: number) => Promise<void>;  // ← add this
 }
 
 export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & SpotifyPlayerControls {
@@ -26,6 +29,8 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Spotify.Track | null>(null);
   const [volume, setVolumeState] = useState(0.5);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const playerRef = useRef<Spotify.Player | null>(null);
   const playerInitialised = useRef(false);
@@ -33,6 +38,8 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const deviceIdRef = useRef<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
   const currentTrackRef = useRef<Spotify.Track | null>(null); // ← new ref
+  const positionRef = useRef(0);
+  const isPlayingRef = useRef(false);
 
   useEffect(() => { queueRef.current = queue; }, [queue]);
 
@@ -64,6 +71,8 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
         currentTrackRef.current = state.track_window.current_track;
         setCurrentTrack(state.track_window.current_track);
         setIsPlaying(!state.paused);
+        setPosition(state.position);
+        setDuration(state.duration);
 
         if (state.paused && state.position === 0 && !state.track_window.next_tracks.length) {
           playNextTrack();
@@ -84,6 +93,18 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
       playerRef.current?.disconnect();
     };
   }, [session?.accessToken]);
+
+  // Song seek
+  useEffect(() => { positionRef.current = position; }, [position]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isPlayingRef.current) {
+        setPosition((p) => Math.min(p + 1000, duration));
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [duration]);
 
   async function playNextTrack() {
     const next = queueRef.current.find((item) => !item.played);
@@ -137,5 +158,9 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
     setVolumeState(clamped);
   }
 
-  return { deviceReady, isPlaying, currentTrack, volume, play, pause, togglePlay, skip, setVolume};
+  async function seek(positionMs: number) {
+    await playerRef.current?.seek(positionMs);
+  }
+
+  return { deviceReady, isPlaying, currentTrack, volume, position, duration, play, pause, togglePlay, skip, setVolume, seek};
 }

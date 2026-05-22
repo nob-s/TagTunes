@@ -14,10 +14,16 @@ type Props = {
 
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
-  const { deviceReady, isPlaying, volume, setVolume, togglePlay, skip } = useSpotifyPlayer(queue);
+  const { deviceReady, isPlaying, volume, position, duration,
+    setVolume, togglePlay, skip, seek } = useSpotifyPlayer(queue);
 
   async function onDeleteItem(item: QueueItem) {
     await fetch(`/api/queue?id=${item.id}`, { method: "DELETE" });
+  }
+
+  function formatMs(ms: number) {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   }
 
   return (
@@ -92,10 +98,8 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
               </button>
             </div>
             <div className="flex items-center gap-3 px-1 pt-2">
-              <span className="text-zinc-500 text-base">{
-                volume == 0 ? "🔇"
-                  : volume < 0.33 ? "🔈"
-                    : volume < 0.66 ? "🔉" : "🔊"}
+              <span className="text-zinc-400 text-sm" aria-hidden="true">
+                {volume === 0 ? "🔇" : volume < 0.33 ? "🔈" : volume < 0.66 ? "🔉" : "🔊"}
               </span>
               <input
                 type="range"
@@ -104,6 +108,17 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
                 step={0.01}
                 value={volume}
                 onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-24 accent-green-500"
+              />
+              <span className="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
+                {formatMs(position)} / {formatMs(duration)}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={duration}
+                value={position}
+                onChange={(e) => seek(Number(e.target.value))}
                 className="flex-1 accent-green-500"
               />
             </div>
