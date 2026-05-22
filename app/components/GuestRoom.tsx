@@ -14,6 +14,15 @@ type Props = {
 export default function GuestRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"search" | "queue">("queue");
   const [voteItems, setVoteItems] = useState<Record<string, boolean>>({});
+  const [guestName, setGuestName] = useState(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("tagtunes_guest_name") ?? "") : ""
+  );
+
+  function handleNameBlur() {
+    if (guestName.trim()) {
+      localStorage.setItem("tagtunes_guest_name", guestName.trim());
+    }
+  }
 
   async function onToggleVote(item: QueueItem) {
     setVoteItems((prev) => ({
@@ -37,6 +46,16 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
         <h1 className="text-5xl font-bold tracking-tight mb-1">{roomCode}</h1>
         <p className="text-zinc-400 text-sm mb-6">Hosted by {hostName}</p>
 
+        <div className="flex items-center gap-2 mb-6">
+          <input
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            onBlur={handleNameBlur}
+            placeholder="Your name"
+            className="bg-zinc-900 text-white text-sm rounded-full px-4 py-2 outline-none focus:ring-1 focus:ring-zinc-600 w-40 placeholder:text-zinc-600"
+          />
+        </div>
+
         <div className="flex bg-zinc-900 rounded-full p-1 mb-6">
           <button
             onClick={() => setActiveTab("search")}
@@ -56,7 +75,7 @@ export default function GuestRoom({ roomCode, queue, hostName }: Props) {
           </button>
         </div>
 
-        {activeTab === "search" && roomCode && <SongSearch roomId={roomCode} />}
+        {activeTab === "search" && roomCode && <SongSearch roomId={roomCode} addedBy={guestName} />}
 
         {activeTab === "queue" && (
           <QueueList

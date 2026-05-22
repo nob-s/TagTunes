@@ -28,7 +28,10 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const [deviceReady, setDeviceReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Spotify.Track | null>(null);
-  const [volume, setVolumeState] = useState(0.5);
+  const [volume, setVolumeState] = useState(() => {
+    if (typeof window === "undefined") return 0.5;
+    return parseFloat(localStorage.getItem("tagtunes_volume") ?? "0.5");
+  });
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -62,6 +65,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
       p.addListener("ready", ({ device_id }) => {
         deviceIdRef.current = device_id;
         setDeviceReady(true);
+        p.setVolume(parseFloat(localStorage.getItem("tagtunes_volume") ?? "0.5"));
       });
 
       p.addListener("player_state_changed", (state) => {
@@ -156,6 +160,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
     const clamped = Math.max(0, Math.min(1, value));
     await playerRef.current?.setVolume(clamped);
     setVolumeState(clamped);
+    localStorage.setItem("tagtunes_volume", String(clamped)); // ← add this
   }
 
   async function seek(positionMs: number) {
