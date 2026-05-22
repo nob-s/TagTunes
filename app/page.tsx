@@ -1,44 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import GuestJoin from "@/app/components/GuestJoin";
-import HostRoom from "@/app/components/HostRoom";
-import GuestRoom from "@/app/components/GuestRoom";
 import Landing from "@/app/components/Landing";
-import { QueueItem } from "@/types/queue";
 
-type View = "landing" | "host-room" | "guest-join" | "guest-room";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+type View = "landing" | "guest-join";
 
 export default function Home() {
   const [view, setView] = useState<View>("landing");
-  const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
   const { data: session } = useSession();
-
-  useEffect(() => {
-    if (!roomCode) return;
-
-    fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
-
-    const channel = supabase
-      .channel(`queue_${roomCode}`)
-      .on("postgres_changes",
-        { event: "*", schema: "public", table: "queue_items"},//TODO , filter: `room_id=eq.${roomCode}` },
-        () => {
-          fetch(`/api/queue?room_id=${roomCode}`).then(r => r.json()).then(setQueue);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [roomCode]);
+  const router = useRouter();
 
   const handleHost = async () => {
     if (session) {
@@ -48,30 +22,16 @@ export default function Home() {
         body: JSON.stringify({ name: "My Room" }),
       });
       const d = await r.json();
-      setRoomCode(d.id);
-      setView("host-room");
+      router.push(`/${d.id}`);
     } else {
       await signIn("spotify");
     }
   };
 
-  if (view === "host-room") {
-    return (
-      <HostRoom roomCode={roomCode} queue={queue} hostName={session?.user?.name ?? undefined}/>
-    );
-  }
-
   if (view === "guest-join") {
     return (
-      <GuestJoin onJoinAction={(code) => {
-          setRoomCode(code);
-          setView("guest-room");
-        }}/>
+      <GuestJoin onJoinAction={(code) => router.push(`/${code}`)} />
     );
-  }
-
-  if (view === "guest-room") {
-    return <GuestRoom roomCode={roomCode} queue={queue} hostName={session?.user?.name ?? undefined}/>;
   }
 
   return (
