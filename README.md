@@ -2,7 +2,7 @@
 
 A collaborative music queue for groups. The host creates a room, shares a link, and everyone adds songs together in real time.
 
-> **⚠️ Currently in Spotify Development Mode** — only approved testers can log in as host. If you haven't been added as a tester, you can still join any room as a guest and add songs to the queue.
+> **⚠️ Currently in Spotify Development Mode** — only approved testers can log in as host. If you haven't been added as a tester, you can still join any room as a guest and add songs to the queue. [Test link](https://tag-tunes.vercel.app/RJVXC1) (my link).
 
 ---
 
