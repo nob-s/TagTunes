@@ -17,9 +17,10 @@ export interface SpotifyPlayerControls {
   play: () => Promise<void>;
   pause: () => void;
   togglePlay: () => Promise<void>;
+  previous: () => Promise<void>;
   skip: () => Promise<void>;
   setVolume: (value: number) => Promise<void>;
-  seek: (positionMs: number) => Promise<void>;  // ← add this
+  seek: (positionMs: number) => Promise<void>;
 }
 
 export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & SpotifyPlayerControls {
@@ -40,7 +41,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   const queueRef = useRef<QueueItem[]>([]);
   const deviceIdRef = useRef<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
-  const currentTrackRef = useRef<Spotify.Track | null>(null); // ← new ref
+  const currentTrackRef = useRef<Spotify.Track | null>(null);
   const positionRef = useRef(0);
   const isPlayingRef = useRef(false);
 
@@ -111,7 +112,10 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   }, [duration]);
 
   async function playNextTrack() {
-    const next = queueRef.current.find((item) => !item.played);
+    const roomCode = window.location.pathname.split("/").pop();
+    const res = await fetch(`/api/queue?room_id=${roomCode}`);
+    const fullQueue: QueueItem[] = await res.json();
+    const next = fullQueue.find((item) => !item.played);
     if (!next || !deviceIdRef.current || !accessTokenRef.current) return;
 
     await fetch("/api/queue", {
@@ -140,7 +144,7 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
   }
 
   function pause() {
-    playerRef.current?.pause(); // ← was wrongly calling togglePlay()
+    playerRef.current?.pause();
   }
 
   async function togglePlay() {
@@ -149,6 +153,37 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
     } else {
       await play();
     }
+  }
+
+  async function previous() {
+    if (!deviceIdRef.current || !accessTokenRef.current) return;
+
+    const roomCode = window.location.pathname.split("/").pop();
+    const res = await fetch(`/api/queue?room_id=${roomCode}`);
+    const fullQueue: QueueItem[] = await res.json();
+
+    const orderedPlayed = fullQueue
+      .filter((item) => item.played);
+    const curr = orderedPlayed[orderedPlayed.length - 1];
+    const prev = orderedPlayed[orderedPlayed.length - 2];
+
+    if (!prev) return;
+
+    await fetch("/api/queue", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: prev.id, new_played: false }),
+    });
+
+    if (curr) {
+      await fetch("/api/queue", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: curr.id, new_played: false }),
+      });
+    }
+
+    await playNextTrack();
   }
 
   async function skip() {
@@ -160,12 +195,14 @@ export function useSpotifyPlayer(queue: QueueItem[]): SpotifyPlayerState & Spoti
     const clamped = Math.max(0, Math.min(1, value));
     await playerRef.current?.setVolume(clamped);
     setVolumeState(clamped);
-    localStorage.setItem("tagtunes_volume", String(clamped)); // ← add this
+    localStorage.setItem("tagtunes_volume", String(clamped));
   }
 
   async function seek(positionMs: number) {
     await playerRef.current?.seek(positionMs);
   }
 
-  return { deviceReady, isPlaying, currentTrack, volume, position, duration, play, pause, togglePlay, skip, setVolume, seek};
+  return {
+    deviceReady, isPlaying, currentTrack, volume, position, duration,
+    play, pause, togglePlay, previous, skip, setVolume, seek};
 }

@@ -15,7 +15,7 @@ type Props = {
 export default function HostRoom({ roomCode, queue, hostName }: Props) {
   const [activeTab, setActiveTab] = useState<"queue" | "search">("queue");
   const { deviceReady, isPlaying, volume, position, duration,
-    setVolume, togglePlay, skip, seek } = useSpotifyPlayer(queue);
+    setVolume, togglePlay, previous, skip, seek } = useSpotifyPlayer(queue);
 
   async function onDeleteItem(item: QueueItem) {
     await fetch(`/api/queue?id=${item.id}`, { method: "DELETE" });
@@ -78,7 +78,10 @@ export default function HostRoom({ roomCode, queue, hostName }: Props) {
             </div>
 
             <div className="flex gap-3">
-              <button className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium">
+              <button
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 transition rounded-full py-3 text-sm font-medium"
+                onClick={previous}
+              >
                 ⏮ Prev
               </button>
               <button
